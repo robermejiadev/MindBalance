@@ -203,14 +203,15 @@ class PageWriter {
     this.y += LINE_H;
   }
 
-  /** Escribe texto partido en líneas; devuelve altura consumida */
+  /** Escribe texto partido en líneas */
   bodyText(text: string, indentX = 0, maxW?: number): void {
     const w = (maxW ?? this.contentWidth) - indentX;
+    // font ANTES de splitTextToSize para que el cálculo sea correcto
+    this.doc.setFontSize(9.5);
+    this.doc.setFont('helvetica', 'normal');
     const lines: string[] = this.doc.splitTextToSize(text || '—', w);
     const totalH = lines.length * LINE_H;
     this.check(totalH);
-    this.doc.setFontSize(9.5);
-    this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(...COLORS.slate700);
     this.doc.text(lines, this.margin + indentX, this.y);
     this.y += totalH;
@@ -225,8 +226,12 @@ class PageWriter {
     textColor: [number, number, number],
     indentText = 7
   ): void {
-    const lines: string[] = this.doc.splitTextToSize(text || '—', this.contentWidth - indentText - 4);
-    const blockH = lines.length * LINE_H + 10;
+    // font ANTES de splitTextToSize para que el cálculo sea correcto
+    this.doc.setFontSize(9.5);
+    this.doc.setFont('helvetica', fontStyle);
+    const maxTextW = this.contentWidth - indentText - 6;
+    const lines: string[] = this.doc.splitTextToSize(text || '—', maxTextW);
+    const blockH = lines.length * LINE_H + 12;
     this.check(blockH);
     this.doc.setFillColor(...bgColor);
     this.doc.roundedRect(this.margin, this.y - 2, this.contentWidth, blockH, 3, 3, 'F');
@@ -234,10 +239,8 @@ class PageWriter {
       this.doc.setFillColor(...accentColor);
       this.doc.rect(this.margin, this.y - 2, 3, blockH, 'F');
     }
-    this.doc.setFontSize(9.5);
-    this.doc.setFont('helvetica', fontStyle);
     this.doc.setTextColor(...textColor);
-    this.doc.text(lines, this.margin + indentText, this.y + 4);
+    this.doc.text(lines, this.margin + indentText, this.y + 5);
     this.y += blockH + 4;
   }
 
@@ -249,10 +252,13 @@ class PageWriter {
     rightBg: [number, number, number]
   ): void {
     const colW = (this.contentWidth - 6) / 2;
-    const leftLines: string[]  = this.doc.splitTextToSize(leftText || '—',  colW - 8);
-    const rightLines: string[] = this.doc.splitTextToSize(rightText || '—', colW - 8);
+    // font ANTES de splitTextToSize para que el cálculo sea correcto
+    this.doc.setFontSize(9);
+    this.doc.setFont('helvetica', 'normal');
+    const leftLines: string[]  = this.doc.splitTextToSize(leftText || '—',  colW - 10);
+    const rightLines: string[] = this.doc.splitTextToSize(rightText || '—', colW - 10);
     const rows = Math.max(leftLines.length, rightLines.length);
-    const colH = rows * LINE_H + 10;
+    const colH = rows * LINE_H + 12;
     this.check(colH);
 
     this.doc.setFillColor(...leftBg);
@@ -260,11 +266,9 @@ class PageWriter {
     this.doc.setFillColor(...rightBg);
     this.doc.roundedRect(this.margin + colW + 6, this.y - 2, colW, colH, 3, 3, 'F');
 
-    this.doc.setFontSize(9);
-    this.doc.setFont('helvetica', 'normal');
     this.doc.setTextColor(...COLORS.slate700);
-    this.doc.text(leftLines,  this.margin + 4,              this.y + 4);
-    this.doc.text(rightLines, this.margin + colW + 10,      this.y + 4);
+    this.doc.text(leftLines,  this.margin + 5,         this.y + 5);
+    this.doc.text(rightLines, this.margin + colW + 11, this.y + 5);
     this.y += colH + 4;
   }
 
