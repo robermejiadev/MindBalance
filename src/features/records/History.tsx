@@ -1,21 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Search, 
-  Trash2, 
-  Eye, 
-  Calendar, 
+import {
+  Search,
+  Trash2,
+  Eye,
+  Calendar,
   X,
-  ClipboardPen
+  ClipboardPen,
+  Download,
+  FileJson,
+  FileText,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { getRepository } from '../../services';
 import type { CbtRecord } from '../../services';
 import { useAuth } from '../../context/AuthContext';
+import { exportToJSON, exportToCSV, exportToPDF } from '../../utils/exportRecords';
 
 export const History: React.FC = () => {
   const { user } = useAuth();
   const [records, setRecords] = useState<CbtRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<CbtRecord | null>(null);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // Filters State
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,11 +64,26 @@ export const History: React.FC = () => {
     }
   };
 
+  const handleExport = async (format: 'json' | 'csv' | 'pdf') => {
+    if (filteredRecords.length === 0) return;
+    setExporting(true);
+    setExportMenuOpen(false);
+    try {
+      if (format === 'json') exportToJSON(filteredRecords);
+      else if (format === 'csv') exportToCSV(filteredRecords);
+      else if (format === 'pdf') exportToPDF(filteredRecords);
+    } catch (err) {
+      console.error('Error al exportar:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // Filtrado y ordenamiento de registros
   const filteredRecords = records
     .filter(record => {
       // 1. Buscador de texto (situación, pensamiento o aprendizaje)
-      const matchesSearch = 
+      const matchesSearch =
         record.q1_whatHappened.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.q3_automaticThought.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.q10_whatLearned.toLowerCase().includes(searchTerm.toLowerCase());
@@ -108,11 +130,11 @@ export const History: React.FC = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
-      {/* Controles de Filtros */}
+
+      {/* Controles de Filtros + Exportar */}
       <div className="card" style={{ padding: '20px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-          
+
           {/* Buscador */}
           <div style={{ flex: '1', minWidth: '240px', position: 'relative' }}>
             <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -161,13 +183,153 @@ export const History: React.FC = () => {
           <div style={{ minWidth: '150px' }}>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'date-desc' | 'date-asc' | 'intensity-desc')}
               className="form-select"
             >
               <option value="date-desc">Fecha: Más reciente</option>
               <option value="date-asc">Fecha: Más antiguo</option>
               <option value="intensity-desc">Intensidad: Mayor a menor</option>
             </select>
+          </div>
+
+          {/* Botón Exportar */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="btn btn-primary"
+              onClick={() => setExportMenuOpen(prev => !prev)}
+              disabled={exporting || filteredRecords.length === 0}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+            >
+              <Download size={16} />
+              {exporting ? 'Exportando...' : `Exportar (${filteredRecords.length})`}
+            </button>
+
+            {/* Dropdown menú */}
+            {exportMenuOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+                  zIndex: 100,
+                  minWidth: '200px',
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Header del menú */}
+                <div style={{
+                  padding: '10px 16px',
+                  borderBottom: '1px solid var(--border-color)',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}>
+                  Formato de exportación
+                </div>
+
+                {/* Opción JSON */}
+                <button
+                  onClick={() => handleExport('json')}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem',
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-primary)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{
+                    width: '32px', height: '32px', borderRadius: '8px',
+                    backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <FileJson size={16} color="#D97706" />
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>JSON</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Backup completo de datos</div>
+                  </div>
+                </button>
+
+                {/* Opción CSV */}
+                <button
+                  onClick={() => handleExport('csv')}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem',
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-primary)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{
+                    width: '32px', height: '32px', borderRadius: '8px',
+                    backgroundColor: '#DCFCE7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <FileSpreadsheet size={16} color="#16A34A" />
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>CSV</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Compatible con Excel / Sheets</div>
+                  </div>
+                </button>
+
+                {/* Opción PDF */}
+                <button
+                  onClick={() => handleExport('pdf')}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px 16px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-primary)',
+                    fontSize: '0.9rem',
+                    textAlign: 'left',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-primary)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >
+                  <span style={{
+                    width: '32px', height: '32px', borderRadius: '8px',
+                    backgroundColor: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <FileText size={16} color="#7C3AED" />
+                  </span>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>PDF</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Reporte profesional detallado</div>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
@@ -180,23 +342,23 @@ export const History: React.FC = () => {
             const dateObj = new Date(record.date);
             const weekdayStr = dateObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
             const dayStr = dateObj.toLocaleDateString('es-ES', { day: 'numeric' });
-            
+
             return (
-              <div 
-                key={record.id} 
-                className="card fade-in" 
+              <div
+                key={record.id}
+                className="card fade-in"
                 onClick={() => setSelectedRecord(record)}
-                style={{ 
-                  cursor: 'pointer', 
-                  padding: '20px', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                style={{
+                  cursor: 'pointer',
+                  padding: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'space-between',
                   gap: '16px'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: 0 }}>
-                  
+
                   {/* Badge de Fecha */}
                   <div style={{
                     width: '60px',
@@ -220,9 +382,9 @@ export const History: React.FC = () => {
 
                   {/* Detalle Breve */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ 
-                      fontSize: '0.95rem', 
-                      fontWeight: 600, 
+                    <p style={{
+                      fontSize: '0.95rem',
+                      fontWeight: 600,
                       color: 'var(--text-primary)',
                       marginBottom: '4px',
                       whiteSpace: 'nowrap',
@@ -231,8 +393,8 @@ export const History: React.FC = () => {
                     }}>
                       {record.q1_whatHappened}
                     </p>
-                    <p style={{ 
-                      fontSize: '0.85rem', 
+                    <p style={{
+                      fontSize: '0.85rem',
                       color: 'var(--text-secondary)',
                       fontStyle: 'italic',
                       whiteSpace: 'nowrap',
@@ -259,16 +421,16 @@ export const History: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '6px' }}>
-                    <button 
-                      className="btn btn-secondary" 
+                    <button
+                      className="btn btn-secondary"
                       style={{ padding: '8px' }}
                       title="Ver Detalles"
                     >
                       <Eye size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={(e) => handleDelete(record.id, e)}
-                      className="btn btn-secondary" 
+                      className="btn btn-secondary"
                       style={{ padding: '8px', color: '#EF4444' }}
                       title="Eliminar"
                     >
@@ -298,7 +460,7 @@ export const History: React.FC = () => {
             <button className="modal-close-btn" onClick={() => setSelectedRecord(null)}>
               <X size={20} />
             </button>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <Calendar size={20} style={{ color: 'var(--accent-primary)' }} />
               <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
@@ -307,7 +469,7 @@ export const History: React.FC = () => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
+
               <div>
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-cyan)', textTransform: 'uppercase', marginBottom: '4px' }}>
                   1. Situación (¿Qué ocurrió?)
@@ -323,12 +485,12 @@ export const History: React.FC = () => {
                 </h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
                   {selectedRecord.q2_directObservation.map((obs) => (
-                    <span key={obs} style={{ 
-                      fontSize: '0.8rem', 
-                      padding: '4px 10px', 
-                      borderRadius: '16px', 
-                      backgroundColor: 'var(--bg-primary)', 
-                      border: '1px solid var(--border-color)' 
+                    <span key={obs} style={{
+                      fontSize: '0.8rem',
+                      padding: '4px 10px',
+                      borderRadius: '16px',
+                      backgroundColor: 'var(--bg-primary)',
+                      border: '1px solid var(--border-color)'
                     }}>
                       {obs}
                     </span>
@@ -349,9 +511,9 @@ export const History: React.FC = () => {
                 <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-cyan)', textTransform: 'uppercase', marginBottom: '8px' }}>
                   4. Emociones e Intensidad
                 </h4>
-                <div style={{ 
-                  display: 'grid', 
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', 
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
                   gap: '12px',
                   backgroundColor: 'var(--bg-primary)',
                   padding: '14px',
@@ -426,7 +588,7 @@ export const History: React.FC = () => {
             </div>
 
             <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button 
+              <button
                 onClick={(e) => {
                   handleDelete(selectedRecord.id, e);
                 }}
@@ -436,7 +598,7 @@ export const History: React.FC = () => {
                 <Trash2 size={16} />
                 Eliminar Registro
               </button>
-              <button 
+              <button
                 onClick={() => setSelectedRecord(null)}
                 className="btn btn-primary"
               >
@@ -445,6 +607,14 @@ export const History: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Click-away para cerrar el menú de exportación */}
+      {exportMenuOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+          onClick={() => setExportMenuOpen(false)}
+        />
       )}
 
     </div>
