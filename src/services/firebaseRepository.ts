@@ -249,6 +249,11 @@ class FirebaseRepository implements IRepository {
     return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
+  async updateCbtRecord(id: string, record: Partial<Omit<CbtRecord, 'id' | 'userId'>>): Promise<void> {
+    if (!this.isInitialized()) return;
+    await setDoc(doc(this.db!, 'daily_records', id), record, { merge: true });
+  }
+
   async deleteCbtRecord(id: string): Promise<void> {
     if (!this.isInitialized()) return;
     await deleteDoc(doc(this.db!, 'daily_records', id));

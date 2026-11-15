@@ -74,6 +74,7 @@ export interface IRepository {
 
   // CBT Records
   saveCbtRecord(record: Omit<CbtRecord, 'id' | 'userId' | 'date'> & { date?: string }): Promise<CbtRecord>;
+  updateCbtRecord(id: string, record: Partial<Omit<CbtRecord, 'id' | 'userId'>>): Promise<void>;
   getCbtRecords(): Promise<CbtRecord[]>;
   deleteCbtRecord(id: string): Promise<void>;
 

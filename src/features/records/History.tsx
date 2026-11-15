@@ -10,17 +10,22 @@ import {
   FileJson,
   FileText,
   FileSpreadsheet,
+  Edit3,
+  Clock,
 } from 'lucide-react';
 import { getRepository } from '../../services';
 import type { CbtRecord } from '../../services';
 import { useAuth } from '../../context/AuthContext';
 import { exportToJSON, exportToCSV, exportToPDF } from '../../utils/exportRecords';
+import { EditRecordModal } from './EditRecordModal';
+import { formatPeruBadge, formatPeruLongDateTime } from '../../utils/dateUtils';
 
 export const History: React.FC = () => {
   const { user } = useAuth();
   const [records, setRecords] = useState<CbtRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState<CbtRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<CbtRecord | null>(null);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -48,8 +53,8 @@ export const History: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (window.confirm('¿Estás seguro de que deseas eliminar este registro de tu historial?')) {
       try {
         const repo = getRepository();
@@ -58,9 +63,42 @@ export const History: React.FC = () => {
         if (selectedRecord && selectedRecord.id === id) {
           setSelectedRecord(null);
         }
+        if (editingRecord && editingRecord.id === id) {
+          setEditingRecord(null);
+        }
       } catch (error) {
         console.error("Error al eliminar registro:", error);
       }
+    }
+  };
+
+  const handleOpenEdit = (record: CbtRecord, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingRecord(record);
+  };
+
+  const handleSaveEditedRecord = async (updated: CbtRecord) => {
+    const repo = getRepository();
+    await repo.updateCbtRecord(updated.id, {
+      date: updated.date,
+      q1_whatHappened: updated.q1_whatHappened,
+      q2_directObservation: updated.q2_directObservation,
+      q3_automaticThought: updated.q3_automaticThought,
+      q4_emotions: updated.q4_emotions,
+      q5_intensity: updated.q5_intensity,
+      q6_supportingEvidence: updated.q6_supportingEvidence,
+      q7_opposingEvidence: updated.q7_opposingEvidence,
+      q8_alternativeExplanations: updated.q8_alternativeExplanations,
+      q9_balancedExplanation: updated.q9_balancedExplanation,
+      q10_whatLearned: updated.q10_whatLearned,
+    });
+
+    // Actualizar estado local
+    setRecords(prev => prev.map(r => r.id === updated.id ? updated : r));
+
+    // Si estaba abierto en el visor modal, actualizarlo también
+    if (selectedRecord && selectedRecord.id === updated.id) {
+      setSelectedRecord(updated);
     }
   };
 
@@ -339,9 +377,7 @@ export const History: React.FC = () => {
       {filteredRecords.length > 0 ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {filteredRecords.map((record) => {
-            const dateObj = new Date(record.date);
-            const weekdayStr = dateObj.toLocaleDateString('es-ES', { weekday: 'short' }).replace('.', '');
-            const dayStr = dateObj.toLocaleDateString('es-ES', { day: 'numeric' });
+            const { weekdayStr, dayStr } = formatPeruBadge(record.date);
 
             return (
               <div
@@ -359,7 +395,7 @@ export const History: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1, minWidth: 0 }}>
 
-                  {/* Badge de Fecha */}
+                  {/* Badge de Fecha (Zona horaria de Perú) */}
                   <div style={{
                     width: '60px',
                     height: '60px',
@@ -422,9 +458,21 @@ export const History: React.FC = () => {
 
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
+                      onClick={(e) => handleOpenEdit(record, e)}
+                      className="btn btn-secondary"
+                      style={{ padding: '8px', color: 'var(--accent-primary)' }}
+                      title="Editar respuestas y fecha"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
                       className="btn btn-secondary"
                       style={{ padding: '8px' }}
                       title="Ver Detalles"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedRecord(record);
+                      }}
                     >
                       <Eye size={16} />
                     </button>
@@ -463,9 +511,14 @@ export const History: React.FC = () => {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
               <Calendar size={20} style={{ color: 'var(--accent-primary)' }} />
-              <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                Registro del {new Date(selectedRecord.date).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: '1.1rem', display: 'block' }}>
+                  Registro del {formatPeruLongDateTime(selectedRecord.date)}
+                </span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Clock size={12} /> Hora de Perú (America/Lima)
+                </span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -587,7 +640,15 @@ export const History: React.FC = () => {
 
             </div>
 
-            <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div style={{ marginTop: '32px', display: 'flex', gap: '12px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => handleOpenEdit(selectedRecord)}
+                className="btn btn-secondary"
+                style={{ color: 'var(--accent-primary)', borderColor: 'var(--accent-primary)' }}
+              >
+                <Edit3 size={16} />
+                Editar Registro
+              </button>
               <button
                 onClick={(e) => {
                   handleDelete(selectedRecord.id, e);
@@ -607,6 +668,15 @@ export const History: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Edición de Registro */}
+      {editingRecord && (
+        <EditRecordModal
+          record={editingRecord}
+          onClose={() => setEditingRecord(null)}
+          onSave={handleSaveEditedRecord}
+        />
       )}
 
       {/* Click-away para cerrar el menú de exportación */}

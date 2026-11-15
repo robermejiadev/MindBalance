@@ -11,6 +11,8 @@ import {
   Brain
 } from 'lucide-react';
 import { getRepository } from '../../services';
+import { toPeruDateTimeLocal, fromPeruDateTimeLocalToISO, formatPeruLongDateTime } from '../../utils/dateUtils';
+import { Calendar, Clock } from 'lucide-react';
 
 interface NewRecordProps {
   onNavigate: (path: string) => void;
@@ -21,6 +23,7 @@ type EmotionKey = 'ansiedad' | 'miedo' | 'tristeza' | 'molestia' | 'verguenza' |
 export const NewRecord: React.FC<NewRecordProps> = ({ onNavigate }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [recordDateLocal, setRecordDateLocal] = useState(() => toPeruDateTimeLocal());
   const [success, setSuccess] = useState(false);
 
   // Form State
@@ -108,7 +111,8 @@ export const NewRecord: React.FC<NewRecordProps> = ({ onNavigate }) => {
         q7_opposingEvidence,
         q8_alternativeExplanations: filteredExplanations.length > 0 ? filteredExplanations : ['Ninguna otra explicación identificada'],
         q9_balancedExplanation,
-        q10_whatLearned
+        q10_whatLearned,
+        date: fromPeruDateTimeLocalToISO(recordDateLocal)
       });
       setSuccess(true);
     } catch (error) {
@@ -196,6 +200,35 @@ export const NewRecord: React.FC<NewRecordProps> = ({ onNavigate }) => {
               <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.5' }}>
                 Describe brevemente el evento desencadenante de forma objetiva. Evita juzgar la situación o a ti mismo; solo describe lo que una cámara de video habría grabado.
               </p>
+              
+              <div style={{
+                backgroundColor: 'var(--bg-primary)',
+                padding: '14px 16px',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color)',
+                marginBottom: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <Calendar size={16} style={{ color: 'var(--accent-primary)' }} />
+                  <span>Fecha y Hora del Suceso (Hora de Perú - UTC-5):</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
+                  <input
+                    type="datetime-local"
+                    value={recordDateLocal}
+                    onChange={(e) => setRecordDateLocal(e.target.value)}
+                    className="form-input"
+                    style={{ maxWidth: '270px' }}
+                  />
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <Clock size={13} />
+                    {recordDateLocal ? formatPeruLongDateTime(fromPeruDateTimeLocalToISO(recordDateLocal)) : ''}
+                  </span>
+                </div>
+              </div>
               <textarea
                 value={q1_whatHappened}
                 onChange={(e) => setQ1(e.target.value)}

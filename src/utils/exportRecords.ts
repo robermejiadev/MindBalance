@@ -5,19 +5,21 @@ import type { CbtRecord } from '../services';
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-ES', {
+  new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'America/Lima',
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  });
+  }).format(new Date(iso));
 
 const formatDateShort = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-ES', {
+  new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'America/Lima',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
-  });
+  }).format(new Date(iso));
 
 const getTopEmotions = (emotions: CbtRecord['q4_emotions']): string =>
   Object.entries(emotions)

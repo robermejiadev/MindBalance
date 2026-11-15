@@ -93,6 +93,13 @@ export class MockRepository implements IRepository {
     return records.filter(r => r.userId === currentUser.uid);
   }
 
+  async updateCbtRecord(id: string, record: Partial<Omit<CbtRecord, 'id' | 'userId'>>): Promise<void> {
+    await delay();
+    let records = this.getStorageItem<CbtRecord[]>('mb_cbt_records', []);
+    records = records.map(r => r.id === id ? { ...r, ...record } : r);
+    this.setStorageItem('mb_cbt_records', records);
+  }
+
   async deleteCbtRecord(id: string): Promise<void> {
     await delay();
     let records = this.getStorageItem<CbtRecord[]>('mb_cbt_records', []);
