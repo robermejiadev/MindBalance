@@ -56,9 +56,9 @@ export const NewRecord: React.FC<NewRecordProps> = ({ onNavigate }) => {
 
   const emotionColors: Record<EmotionKey, string> = {
     ansiedad: 'var(--accent-primary)',
-    miedo: '#8B5CF6',
+    miedo: '#EAB308',
     tristeza: 'var(--accent-cyan)',
-    molestia: '#EC4899',
+    molestia: '#10B981',
     verguenza: '#F59E0B',
     enojo: '#EF4444'
   };
